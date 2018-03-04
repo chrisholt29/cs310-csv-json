@@ -43,47 +43,88 @@ public class Converter {
     
     @SuppressWarnings("unchecked")
     public static String csvToJson(String csvString) {
-        
-        String results = "";
+        //initialize object and read info and place info into object
+        JSONObject jsonObject = new JSONObject();
+	//seperates data
+        CSVParser parser = new CSVParser();
+        BufferedReader bReader = new BufferedReader(new StringReader(csvString));
+        CSVReader reader = new CSVReader(new StringReader(csvString));
+        JSONArray rowHeaders = new JSONArray();
+        JSONArray colHeaders = new JSONArray();
+        JSONArray data = new JSONArray();
+        jsonObject.put("rowHeaders", rowHeaders);
+        jsonObject.put("colHeaders", colHeaders);
+        jsonObject.put("data", data);
         
         try {
-            
-            CSVReader reader = new CSVReader(new StringReader(csvString));
             List<String[]> full = reader.readAll();
             Iterator<String[]> iterator = full.iterator();
+            String[] headings = iterator.next();
             
-            JSONObject jsonObject = new JSONObject();
+  	    //create two loops that read headers and then the info
+            for (String heading : headings) {
+                colHeaders.add(heading);
+            }
             
-            // INSERT YOUR CODE HERE
-            
+            String line = bReader.readLine();
+            while ((line = bReader.readLine()) != null) {
+		//seperate data then store into a list
+                String[] parsedData = parser.parseLine(line);
+                JSONArray rowData = new JSONArray();
+                rowHeaders.add(parsedData[0]);
+                rowData.add(new Long(parsedData[1]));
+                rowData.add(new Long(parsedData[2]));
+                rowData.add(new Long(parsedData[3]));
+                rowData.add(new Long(parsedData[4]));
+                data.add(rowData);
+            }
+
+            String jsonString = JSONValue.toJSONString(jsonObject);
         }
-        
         catch(IOException e) { return e.toString(); }
         
-        return results.trim();
-        
+        return jsonObject.toString();
     }
     
     public static String jsonToCsv(String jsonString) {
         
-        String results = "";
-        
+        String csvString = "";
         try {
-            
+
             JSONParser parser = new JSONParser();
             JSONObject jsonObject = (JSONObject)parser.parse(jsonString);
             
-            StringWriter writer = new StringWriter();
-            CSVWriter csvWriter = new CSVWriter(writer, ',', '"', '\n');
-            
-            // INSERT YOUR CODE HERE
-            
+            JSONArray colHeaders = (JSONArray) jsonObject.get("colHeaders");
+            JSONArray rowHeaders = (JSONArray) jsonObject.get("rowHeaders");
+            JSONArray data = (JSONArray) jsonObject.get("data");
+            //sepeate columns into appropiate format
+            for(int i=0; i < colHeaders.size(); i++){
+                if(i != colHeaders.size()-1){
+                    csvString += "\""+ colHeaders.get(i)+ "\""+",";
+                }
+                else{
+                    csvString+= "\""+ colHeaders.get(i)+ "\"";
+                }
+                
+            }
+            csvString += "\n";
+            //seperate rows into appropriate format
+            for(int i=0; i < rowHeaders.size(); i++){
+                ArrayList rows = new ArrayList<String>();
+                String row = "\"" + rowHeaders.get(i) + "\"";
+                rows.add(row);
+                JSONArray sub = (JSONArray) data.get(i);
+                
+                for(int j=0; j < sub.size(); j++){
+                    String indData = "\"" + sub.get(j) + "\"";
+                    rows.add(indData);
+                }
+                csvString += rows.toString().replace("[", "").replace("]", "").replace(", ", ",") + "\n";
+            }
         }
-        
         catch(ParseException e) { return e.toString(); }
         
-        return results.trim();
-        
+        return csvString.trim();
     }
 	
 }
